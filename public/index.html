@@ -13,4 +13,14 @@ function send(){let v=$('guess').value.trim();if(!valid(v))return message('Escri
 function connect(action){if(typeof io==='undefined')return $('error').textContent='El servidor online no está disponible.';if(socket)socket.disconnect();socket=io();socket.on('room',renderOnline);socket.on('connect_error',()=>{$('error').textContent='No se pudo conectar al servidor.'});socket.emit(action,{name:$('name').value||'Jugador',code:$('roomInput').value.toUpperCase().trim()},r=>{if(r.error){$('error').textContent=r.error;socket.disconnect();socket=null}else tone()})}
 function renderOnline(r){room=r;$('modeLabel').textContent='DUELO ONLINE';$('roomBox').classList.remove('hide');$('roomCode').textContent=r.code;$('title').textContent='Duelo online';$('status').textContent=r.players.map(x=>x.name).join(' vs ');history(r.history.map(x=>({...x,name:r.players[x.player]?.name||'Jugador'})));let mine=r.turn==='you'&&r.status==='playing';$('guess').disabled=!mine;$('send').disabled=!mine;$('turnName').textContent=r.status==='waiting'?'Esperando rival':r.status==='finished'?'Partida terminada':mine?'Tu turno':'Turno del rival';$('again').classList.toggle('hide',r.status!=='finished');if(r.status==='playing')countdown(r.deadline);else{clearInterval(interval);$('timer').textContent='--:--'}if(r.status==='waiting')message('Comparte el enlace o código con tu rival.');else if(r.status==='finished'){let idx=r.players.findIndex(x=>x.id==='you');message((idx===r.winner?'¡Ganaste! ':'Fin de la partida. ')+(r.reason||''))}else message(mine?'Tu turno. ¡Descifra el código!':'Espera la jugada de tu rival.');screen('game')}
 function again(){if(mode==='online'){socket.emit('rematch',r=>message(r.error||'Esperando que tu rival acepte la revancha.'))}else begin()}function share(){let url=location.origin+'/?sala='+room.code;if(navigator.share)navigator.share({title:'Picas y Fijas',text:'¡Te reto a jugar! Sala '+room.code,url}).catch(()=>{});else navigator.clipboard.writeText(url).then(()=>message('Enlace copiado.'))}let params=new URLSearchParams(location.search);if(params.has('sala')){setup('online');$('roomInput').value=params.get('sala').toUpperCase()}
+const enviarOriginal = send;
+send = function() {
+  const intentos = g?.items.length || 0;
+  enviarOriginal();
+  if (mode === 'solo' && g && !g.done &&
+      g.items.length > intentos) {
+    g.deadline = Date.now() + 120000;
+    countdown(g.deadline);
+  }
+};
 </script></html>
